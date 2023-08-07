@@ -2,24 +2,81 @@ name: Go
 
 on:
   push:
-    branches: [ "main" ]
+    # branches:
+    #   - "main"
+    tags:
+      - "*"
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch: #option to run it from webui
 
 jobs:
 
-  build:
-    runs-on: ubuntu-latest
+  build-test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        arch: [x64, arm64]
+      
+    runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v3
 
     - name: Set up Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v2
       with:
         go-version: 1.18
-
     - name: Build
-      run: go build -v ./...
-
+      run: |
+        if [[ "${{ matrix.arch }}" == "x64" ]]; then
+          GOARCH=amd64 go build -o ./tcpforwarder-x64 ./...
+        elif [[ "${{ matrix.arch }}" == "arm64" ]]; then
+          GOARCH=arm64 go build -o ./tcpforwarder-arm64 ./...
+        fi
     - name: Test
       run: go test -v ./...
+    - name: Publish Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: tcpforwarder-${{ matrix.arch }}
+        path: ./
+  release:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+    needs: build-test
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v3
+      - name: Upload Binarie x64
+        id: upload_binaries_x64
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./tcpforwarder-x64/tcpforwarder-x64
+          asset_name: tcpforwarder-x64
+          asset_content_type: application/octet-stream
+      - name: Upload Binarie arm64
+        id: upload_binaries_arm64
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./tcpforwarder-arm64/tcpforwarder-arm64
+          asset_name: tcpforwarder-arm64
+          asset_content_type: application/octet-stream
+      

@@ -1,3 +1,5 @@
+## primary reason for this fork is to compile releases for other architectures
+
 # tcp forwarder
 
 its a simple tcp forwarding tool to forward incoming tcp connections to a remote service at a remote host
