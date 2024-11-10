@@ -6,7 +6,7 @@ docker buildx build --builder=mybuilder --platform=linux/amd64,linux/arm64 -t ha
 
 
 
-
+docker buildx build --builder=mybuilder --platform=linux/amd64,linux/arm64 -t bornav/tcpforwarder:<tag> --push .
 
 
 

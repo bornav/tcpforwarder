@@ -83,6 +83,37 @@ func main() {
 				panic(err)
 			}
 		}
+	} else if strings.Contains(*listenPort, ",") {
+		ports := strings.Split(*listenPort, ",")
+		println(fmt.Sprintf(`%s`+"\n", ports))
+		for _, portStr := range ports {
+			// Trim any whitespace
+			portStr = strings.TrimSpace(portStr)
+			port, err := strconv.Atoi(portStr)
+			if err != nil || port < 1 || port > 65534 {
+				println(fmt.Sprintf("[E] invalid port number %s, should be a Number between 1 and 65534", portStr))
+				os.Exit(1)
+			}
+			
+			// TCP
+			println(fmt.Sprintf(`[I] tcp://%s:%d <-> tcp://%s:%d`+"\n", *listenHost, port, *remoteHost, port))
+			go startForwarder(Address{
+				Host: *listenHost,
+				Port: port,
+			}, Address{
+				Host: *remoteHost,
+				Port: port,
+			}, *dialTimeout)
+			
+			// UDP
+			println(fmt.Sprintf(`[I] udp://%s:%d <-> tcp://%s:%d`+"\n", *listenHost, port, *remoteHost, port))
+			sourceUDP := *listenHost + ":" + strconv.Itoa(port)
+			destUDP := *remoteHost + ":" + strconv.Itoa(port)
+			_, err = Forward_udp(sourceUDP, destUDP, DefaultTimeout)
+			if err != nil {
+				panic(err)
+			}
+		}
 	} else {
 		// TCP
 		n, err := strconv.Atoi(*listenPort)
