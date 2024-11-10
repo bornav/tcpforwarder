@@ -1,3 +1,3 @@
-module github.com/benyamin218118/tcpforwarder
+module network-forwarding
 
-go 1.18
+go 1.23.1

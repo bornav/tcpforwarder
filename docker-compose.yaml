@@ -1,0 +1,47 @@
+services:
+  tcpforwarder:
+    build: 
+      context: "."
+      platforms:
+        - "linux/amd64"
+        - "linux/arm64"
+    image: tcpforwarder
+    container_name: tcpforwarder
+    environment:
+      LISTEN_HOST: 0.0.0.0
+      LISTEN_PORT: 9998
+      REMOTE_HOST: 1.1.1.1
+      REMOTE_PORT: 443
+      DIAL_TIMEOUT: 4
+
+    #   # OTEL_TRACES_EXPORTER: "otlp"
+    #   # OTEL_EXPORTER_OTLP_ENDPOINT: "https://otel-col.cloud.icylair.com/"
+    #   # OTEL_SERVICE_NAME: "traefik-forward-auth"
+    #   # OTEL_PROPAGATORS: "tracecontext,baggage"
+    #   # OTEL_LOG_LEVEL: "debug"
+    #   # # OTEL_GO_AUTO_TARGET_EXE: "/usr/local/go/bin/go"
+    #   # OTEL_GO_AUTO_TARGET_EXE: "/usr/bin/traefik-forward-auth"
+
+    #   CLIENT_ID: forward_auth
+    #   # OTEL_LOG_LEVEL: "debug"
+    #   # NODE_OPTIONS: "--require @opentelemetry/auto-instrumentations-node/register"
+    # #   PUID: 1000 -- optional, your user id
+    # #   PGID: 1000 -- optional, your group id
+    ports:
+      - 9998:9998
+    # # volumes:
+    # #   - /proc:/host/proc
+    #   # - /var/run/docker.sock:/var/run/docker.sock:ro # optional, for docker integrations
+    restart: unless-stopped
+  go-auto:
+    image: otel/autoinstrumentation-go
+    privileged: true
+    pid: "host"
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: "https://otel-col.cloud.icylair.com"
+      OTEL_GO_AUTO_TARGET_EXE: "/usr/bin/tcpforwarder"
+      OTEL_SERVICE_NAME: "tcpforwarder"
+      OTEL_GO_AUTO_GLOBAL: "true"
+      # OTEL_PROPAGATORS: tracecontext,baggage
+    # volumes:
+    #   - /proc:/host/proc

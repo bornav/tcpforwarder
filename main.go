@@ -12,6 +12,14 @@ type Address struct {
 	Host string
 	Port int
 }
+type Options struct {
+	listenHost  string `default:"0.0.0.0"`
+	listenPort  string `default:"8080"`
+	remoteHost  string `default:"8.8.8.8"`
+	remotePort  int    `default:53`
+	dialTimeout int    `default:4`
+	TrafficType string `default:"TCP"` // TCP UDP TCP/UDP
+}
 
 func (a *Address) String() string {
 	return fmt.Sprintf(`%s:%d`, a.Host, a.Port)
@@ -28,13 +36,9 @@ func main() {
 
 	flag.Parse()
 	if *help || *h {
-		println(`
-find me on telegram: @unsafepointer
-`)
 		flag.PrintDefaults()
 		return
 	}
-
 	if *dialTimeout <= 0 || *dialTimeout > 32 {
 		panic("invalid dial timeout, it should be bigger than 0 and smaller than 32")
 	}
@@ -61,6 +65,7 @@ find me on telegram: @unsafepointer
 			os.Exit(1)
 		}
 		for port := start; port <= end; port++ {
+			// TCP
 			println(fmt.Sprintf(`[I] tcp://%s:%d <-> tcp://%s:%d`+"\n", *listenHost, port, *remoteHost, port))
 			go startForwarder(Address{
 				Host: *listenHost,
@@ -69,8 +74,17 @@ find me on telegram: @unsafepointer
 				Host: *remoteHost,
 				Port: port,
 			}, *dialTimeout)
+			// UDP
+			println(fmt.Sprintf(`[I] udp://%s:%d <-> tcp://%s:%d`+"\n", *listenHost, port, *remoteHost, port))
+			sourceUDP := *listenHost + ":" + strconv.Itoa(port)
+			destUDP := *remoteHost + ":" + strconv.Itoa(port)
+			_, err := Forward_udp(sourceUDP, destUDP, DefaultTimeout)
+			if err != nil {
+				panic(err)
+			}
 		}
 	} else {
+		// TCP
 		n, err := strconv.Atoi(*listenPort)
 		if err != nil {
 			println("[E] invalid listenPort, should be a Number between 1 and 65534")
@@ -80,6 +94,14 @@ find me on telegram: @unsafepointer
 		src.Port = n
 		println(fmt.Sprintf(`[I] tcp://%s <-> tcp://%s`+"\n", src.String(), dst.String()))
 		go startForwarder(src, dst, *dialTimeout)
+
+		// UDP
+		println(fmt.Sprintf(`[I] udp://%s:%d <-> tcp://%s`+"\n", *listenHost, n, dst.String()))
+		sourceUDP := *listenHost + ":" + strconv.Itoa(n)
+		_, err = Forward_udp(sourceUDP, dst.String(), DefaultTimeout)
+		if err != nil {
+			panic(err)
+		}
 	}
 	select {}
 }

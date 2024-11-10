@@ -1,3 +1,19 @@
+docker buildx build --builder=mybuilder --platform=linux/amd64,linux/arm64 -t harbor.icylair.com/library/tcpforwarder:v0.1-test --push .
+
+
+// todo https://github.com/1lann/udp-forward/blob/master/forward.go
+
+
+
+
+
+
+
+
+
+
+
+
 ## primary reason for this fork is to compile releases for other architectures
 
 # tcp forwarder
