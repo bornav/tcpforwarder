@@ -37,6 +37,18 @@ type Forwarder_udp struct {
 // sake. It is equivelant to 5 minutes.
 const DefaultTimeout = time.Minute * 1
 
+func sleep_until_resolve(foo string) {
+	var err error
+	for {
+		_, err = net.ResolveUDPAddr("udp", foo)
+		if err == nil {
+			break
+		}
+		log.Println("Failed to resolve UDP address:", foo)
+		time.Sleep(15 * time.Second)
+	}
+}
+
 // Forward forwards UDP packets from the src address to the dst address, with a
 // timeout to "disconnect" clients after the timeout period of inactivity. It
 // implements a reverse NAT and thus supports multiple seperate users. Forward
@@ -48,6 +60,9 @@ func Forward_udp(src, dst string, timeout time.Duration) (*Forwarder_udp, error)
 	forwarder_udp.connectionsMutex = new(sync.RWMutex)
 	forwarder_udp.connections = make(map[string]*connection)
 	forwarder_udp.timeout = timeout
+
+	sleep_until_resolve(src)
+	sleep_until_resolve(dst)
 
 	var err error
 	forwarder_udp.src, err = net.ResolveUDPAddr("udp", src)

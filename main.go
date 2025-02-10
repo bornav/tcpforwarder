@@ -3,9 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Address struct {
@@ -33,7 +35,7 @@ func main() {
 	dialTimeout := flag.Int("timeout", 4, "dial timeout in seconds")
 	help := flag.Bool("help", false, "print help")
 	h := flag.Bool("h", false, "")
-
+	timeout := 5 * time.Second
 	flag.Parse()
 	if *help || *h {
 		flag.PrintDefaults()
@@ -78,10 +80,11 @@ func main() {
 			println(fmt.Sprintf(`[I] udp://%s:%d <-> tcp://%s:%d`+"\n", *listenHost, port, *remoteHost, port))
 			sourceUDP := *listenHost + ":" + strconv.Itoa(port)
 			destUDP := *remoteHost + ":" + strconv.Itoa(port)
-			_, err := Forward_udp(sourceUDP, destUDP, DefaultTimeout)
+			destinationForwarder, err := Forward_udp(sourceUDP, destUDP, timeout)
 			if err != nil {
 				panic(err)
 			}
+			onDisconnect(destinationForwarder)
 		}
 	} else if strings.Contains(*listenPort, ",") {
 		ports := strings.Split(*listenPort, ",")
@@ -94,7 +97,7 @@ func main() {
 				println(fmt.Sprintf("[E] invalid port number %s, should be a Number between 1 and 65534", portStr))
 				os.Exit(1)
 			}
-			
+
 			// TCP
 			println(fmt.Sprintf(`[I] tcp://%s:%d <-> tcp://%s:%d`+"\n", *listenHost, port, *remoteHost, port))
 			go startForwarder(Address{
@@ -104,15 +107,16 @@ func main() {
 				Host: *remoteHost,
 				Port: port,
 			}, *dialTimeout)
-			
+
 			// UDP
 			println(fmt.Sprintf(`[I] udp://%s:%d <-> tcp://%s:%d`+"\n", *listenHost, port, *remoteHost, port))
 			sourceUDP := *listenHost + ":" + strconv.Itoa(port)
 			destUDP := *remoteHost + ":" + strconv.Itoa(port)
-			_, err = Forward_udp(sourceUDP, destUDP, DefaultTimeout)
+			sourceforwarder, err := Forward_udp(sourceUDP, destUDP, timeout)
 			if err != nil {
 				panic(err)
 			}
+			onDisconnect(sourceforwarder)
 		}
 	} else {
 		// TCP
@@ -129,12 +133,19 @@ func main() {
 		// UDP
 		println(fmt.Sprintf(`[I] udp://%s:%d <-> tcp://%s`+"\n", *listenHost, n, dst.String()))
 		sourceUDP := *listenHost + ":" + strconv.Itoa(n)
-		_, err = Forward_udp(sourceUDP, dst.String(), DefaultTimeout)
+		sourceforwarder, err := Forward_udp(sourceUDP, dst.String(), timeout)
 		if err != nil {
 			panic(err)
 		}
+		onDisconnect(sourceforwarder)
 	}
 	select {}
+}
+
+func onDisconnect(client *Forwarder_udp) {
+	client.OnDisconnect(func(addr string) {
+		log.Println("Client disconnected:", addr)
+	})
 }
 
 func startForwarder(src, dst Address, dialTimeout int) {

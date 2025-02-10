@@ -5,13 +5,13 @@ services:
       platforms:
         - "linux/amd64"
         - "linux/arm64"
-    image: tcpforwarder
+    image: bornav/tcpforwarder:v0.3
     container_name: tcpforwarder
     environment:
       LISTEN_HOST: 0.0.0.0
-      LISTEN_PORT: 9998
-      REMOTE_HOST: 1.1.1.1
-      REMOTE_PORT: 443
+      LISTEN_PORT: 9987,10011,30033
+      REMOTE_HOST: ts.icylair.com
+      # REMOTE_PORT: 9987
       DIAL_TIMEOUT: 4
 
     #   # OTEL_TRACES_EXPORTER: "otlp"
@@ -33,15 +33,15 @@ services:
     # #   - /proc:/host/proc
     #   # - /var/run/docker.sock:/var/run/docker.sock:ro # optional, for docker integrations
     restart: unless-stopped
-  go-auto:
-    image: otel/autoinstrumentation-go
-    privileged: true
-    pid: "host"
-    environment:
-      OTEL_EXPORTER_OTLP_ENDPOINT: "https://otel-col.cloud.icylair.com"
-      OTEL_GO_AUTO_TARGET_EXE: "/usr/bin/tcpforwarder"
-      OTEL_SERVICE_NAME: "tcpforwarder"
-      OTEL_GO_AUTO_GLOBAL: "true"
-      # OTEL_PROPAGATORS: tracecontext,baggage
-    # volumes:
-    #   - /proc:/host/proc
+  # go-auto:
+  #   image: otel/autoinstrumentation-go
+  #   privileged: true
+  #   pid: "host"
+  #   environment:
+  #     OTEL_EXPORTER_OTLP_ENDPOINT: "https://otel-col.cloud.icylair.com"
+  #     OTEL_GO_AUTO_TARGET_EXE: "/usr/bin/tcpforwarder"
+  #     OTEL_SERVICE_NAME: "tcpforwarder"
+  #     OTEL_GO_AUTO_GLOBAL: "true"
+  #     # OTEL_PROPAGATORS: tracecontext,baggage
+  #   # volumes:
+  #   #   - /proc:/host/proc
